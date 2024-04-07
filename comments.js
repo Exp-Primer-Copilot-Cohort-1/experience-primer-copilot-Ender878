@@ -1,46 +1,32 @@
 // create web server
-var express = require('express');
-var app = express();
-var bodyParser = require('body-parser');
-var fs = require('fs');
-var path = require('path');
-var comments = require('./comments.json');
+const express = require('express');
+const app = express();
+const port = 3000;
+const bodyParser = require('body-parser');
+const fs = require('fs');
+const path = require('path');
 
-// specify the folder to serve static files
-app.use(express.static(path.join(__dirname, 'public')));
+// create a read stream from the file
+const readStream = fs.createReadStream(path.join(__dirname, './comments.txt'), 'utf8');
 
-// specify the template engine
-app.set('view engine', 'ejs');
+// create a write stream to the file
+const writeStream = fs.createWriteStream(path.join(__dirname, './comments.txt'), { flags: 'a' });
 
-// specify the folder where the templates are
-app.set('views', path.join(__dirname, 'views'));
-
-// parse application/x-www-form-urlencoded
-app.use(bodyParser.urlencoded({ extended: false }));
-
-// parse application/json
 app.use(bodyParser.json());
 
-// get all comments
-app.get('/comments', function (req, res) {
-  res.render('comments', { comments: comments });
+// create a GET route
+app.get('/', (req, res) => {
+  readStream.pipe(res);
 });
 
-// add a new comment
-app.post('/comments', function (req, res) {
-  var comment = req.body;
-  comments.push(comment);
-  fs.writeFile('comments.json', JSON.stringify(comments), function (err) {
-    if (err) {
-      console.error(err);
-      res.status(500).send('Server error');
-      return;
-    }
-    res.redirect('/comments');
-  });
+// create a POST route
+app.post('/', (req, res) => {
+  const { comment } = req.body;
+  writeStream.write(`${comment}\n`);
+  res.send('Comment added');
 });
 
-// start the server
-app.listen(3000, function () {
-  console.log('Server is listening on port 3000');
+// start server
+app.listen(port, () => {
+  console.log(`Server is running on http://localhost:${port}`);
 });
